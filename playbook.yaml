@@ -1,0 +1,52 @@
+- name: Initial VM Provisioning
+  hosts: all
+
+  vars:
+    users:
+      - ivan
+      - petr
+
+  tasks:
+  
+    - name: Pupseni
+      user:
+        name: "{{ item }}"
+        
+        # Instead of hardcoded password you coul try:
+        # https://docs.ansible.com/ansible/2.4/playbooks_lookups.html#the-password-lookup
+        password: "{{ 'P@ssw0rd' | password_hash('sha512') }}"
+        
+        # Add to groups.
+        groups: sudo
+        append: yes
+      loop: "{{ users }}"
+
+
+    - name: Install cool soft
+      package:
+        state: present
+        name: "{{ item }}"
+      loop:
+        - curl
+        - wget
+
+    - name: Copy authorized_keys
+      copy:
+        src: /home/anatoly/Рабочий стол/ansible-train-master/authorized_keys
+        dest: /root/.ssh
+
+    - name: Configure sshd
+      lineinfile:
+        path: "/etc/ssh/sshd_config"
+        regex: "^(#)?{{item.key}}"
+        line: "{{item.key}} {{item.value}}"
+        state: present
+      loop:
+        - { key: "PermitRootLogin", value: "yes" }
+        - { key: "PubkeyAuthentication", value: "yes"}
+        - { key: "PasswordAuthentication", value: "no" }
+
+    - name: Restart ssh
+      service:
+        name: ssh
+        state: restarted
